@@ -1,10 +1,11 @@
 import Foundation
-import Network
 
 class HookServer {
-    private var listener: NWListener?
     private let onEvent: (HookEvent) -> Void
     private(set) var port: UInt16 = 19280
+    private var serverSocket: Int32 = -1
+    private var running = false
+    private let serverQueue = DispatchQueue(label: "ccani.server", qos: .userInitiated)
 
     init(onEvent: @escaping (HookEvent) -> Void) {
         self.onEvent = onEvent
@@ -12,40 +13,125 @@ class HookServer {
 
     func start() throws {
         // Check if another ccani instance is already running
-        if let existingPort = readExistingPortFile(), isPortResponding(existingPort) {
+        if let existingPort = readExistingPortFile(), isPortListening(existingPort) {
             throw ServerError.anotherInstanceRunning(port: existingPort)
         }
 
+        // Try to bind to a port in range
         for candidatePort in UInt16(19280)...UInt16(19289) {
-            do {
-                let nwPort = NWEndpoint.Port(rawValue: candidatePort)!
-                let params = NWParameters.tcp
-                let listener = try NWListener(using: params, on: nwPort)
-                self.listener = listener
-                self.port = candidatePort
-                writePortFile()
+            let sock = socket(AF_INET, SOCK_STREAM, 0)
+            guard sock >= 0 else { continue }
 
-                listener.newConnectionHandler = { [weak self] conn in
-                    self?.handleConnection(conn)
+            var yes: Int32 = 1
+            setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, socklen_t(MemoryLayout<Int32>.size))
+
+            var addr = sockaddr_in()
+            addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+            addr.sin_family = sa_family_t(AF_INET)
+            addr.sin_port = candidatePort.bigEndian
+            addr.sin_addr.s_addr = UInt32(0x7f000001).bigEndian // 127.0.0.1
+
+            let bindResult = withUnsafePointer(to: &addr) { ptr in
+                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockPtr in
+                    bind(sock, sockPtr, socklen_t(MemoryLayout<sockaddr_in>.size))
                 }
-                listener.stateUpdateHandler = { state in
-                    if case .failed(let err) = state {
-                        print("Server failed: \(err)")
-                    }
-                }
-                listener.start(queue: .global(qos: .userInitiated))
-                print("ccani server listening on port \(candidatePort)")
-                return
-            } catch {
+            }
+
+            if bindResult != 0 {
+                close(sock)
                 continue
             }
+
+            if listen(sock, 128) != 0 {
+                close(sock)
+                continue
+            }
+
+            self.serverSocket = sock
+            self.port = candidatePort
+            self.running = true
+            writePortFile()
+
+            print("ccani server listening on port \(candidatePort)")
+
+            // Accept connections in background
+            serverQueue.async { [weak self] in
+                self?.acceptLoop()
+            }
+            return
         }
         throw ServerError.noAvailablePort
     }
 
     func stop() {
-        listener?.cancel()
+        running = false
+        if serverSocket >= 0 {
+            close(serverSocket)
+            serverSocket = -1
+        }
         removePortFile()
+    }
+
+    // MARK: - Accept Loop
+
+    private func acceptLoop() {
+        while running {
+            var clientAddr = sockaddr_in()
+            var clientLen = socklen_t(MemoryLayout<sockaddr_in>.size)
+
+            let clientSock = withUnsafeMutablePointer(to: &clientAddr) { ptr in
+                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockPtr in
+                    accept(serverSocket, sockPtr, &clientLen)
+                }
+            }
+
+            guard clientSock >= 0 else {
+                if !running { break }
+                continue
+            }
+
+            // Handle each connection on a concurrent queue
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                self?.handleClient(clientSock)
+            }
+        }
+    }
+
+    private func handleClient(_ sock: Int32) {
+        defer { close(sock) }
+
+        // Set short read timeout
+        var timeout = timeval(tv_sec: 2, tv_usec: 0)
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+
+        // Read request — curl sends everything in one go, so one read is enough
+        var buffer = [UInt8](repeating: 0, count: 65536)
+        let bytesRead = buffer.withUnsafeMutableBytes { ptr in
+            read(sock, ptr.baseAddress!, 65536)
+        }
+        guard bytesRead > 0 else { return }
+
+        let data = Data(buffer[0..<bytesRead])
+
+        // Parse HTTP body
+        var responseStr = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+
+        if let bodyRange = data.range(of: Data("\r\n\r\n".utf8)) {
+            let body = data[bodyRange.upperBound...]
+            if let event = try? JSONDecoder().decode(HookEvent.self, from: body) {
+                DispatchQueue.main.async { [weak self] in
+                    self?.onEvent(event)
+                }
+                responseStr = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}"
+            }
+        }
+
+        // Send response
+        if let responseData = responseStr.data(using: .utf8) {
+            responseData.withUnsafeBytes { ptr in
+                _ = Foundation.write(sock, ptr.baseAddress!, responseData.count)
+            }
+        }
     }
 
     // MARK: - Single Instance Detection
@@ -60,62 +146,27 @@ class HookServer {
         return port
     }
 
-    private func isPortResponding(_ port: UInt16) -> Bool {
-        let semaphore = DispatchSemaphore(value: 0)
-        var responding = false
+    private func isPortListening(_ port: UInt16) -> Bool {
+        let sock = socket(AF_INET, SOCK_STREAM, 0)
+        guard sock >= 0 else { return false }
+        defer { close(sock) }
 
-        let connection = NWConnection(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!, using: .tcp)
-        connection.stateUpdateHandler = { state in
-            if case .ready = state {
-                responding = true
-                semaphore.signal()
-            } else if case .failed = state {
-                semaphore.signal()
+        var addr = sockaddr_in()
+        addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_port = port.bigEndian
+        addr.sin_addr.s_addr = UInt32(0x7f000001).bigEndian
+
+        // Set connect timeout
+        var timeout = timeval(tv_sec: 1, tv_usec: 0)
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+
+        let result = withUnsafePointer(to: &addr) { ptr in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockPtr in
+                connect(sock, sockPtr, socklen_t(MemoryLayout<sockaddr_in>.size))
             }
         }
-        connection.start(queue: .global())
-        _ = semaphore.wait(timeout: .now() + 1.0)
-        connection.cancel()
-        return responding
-    }
-
-    // MARK: - Connection Handling
-
-    private func handleConnection(_ connection: NWConnection) {
-        connection.start(queue: .global(qos: .userInitiated))
-        receiveData(from: connection, accumulated: Data())
-    }
-
-    private func receiveData(from connection: NWConnection, accumulated: Data) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
-            var buffer = accumulated
-            if let data = data { buffer.append(data) }
-
-            if isComplete || error != nil {
-                self?.processRequest(buffer, connection: connection)
-            } else {
-                self?.receiveData(from: connection, accumulated: buffer)
-            }
-        }
-    }
-
-    private func processRequest(_ data: Data, connection: NWConnection) {
-        let response: String
-        if let bodyRange = data.range(of: Data("\r\n\r\n".utf8)) {
-            let body = data[bodyRange.upperBound...]
-            if let event = try? JSONDecoder().decode(HookEvent.self, from: body) {
-                DispatchQueue.main.async { self.onEvent(event) }
-                response = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}"
-            } else {
-                response = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n"
-            }
-        } else {
-            response = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n"
-        }
-
-        connection.send(content: response.data(using: .utf8), completion: .contentProcessed { _ in
-            connection.cancel()
-        })
+        return result == 0
     }
 
     // MARK: - Port File

@@ -8,9 +8,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var clickMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        print("[ccani] App launched")
         setupPanel()
+        print("[ccani] Panel set up")
         startServer()
+        print("[ccani] Server started")
         setupClickOutsideMonitor()
+        print("[ccani] Ready")
     }
 
     func applicationWillTerminate(_ notification: Notification) {
