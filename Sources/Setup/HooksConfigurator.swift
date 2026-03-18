@@ -61,27 +61,23 @@ struct HooksConfigurator {
 
         var hooks = json["hooks"] as? [String: Any] ?? [:]
 
-        let httpEvents = [
+        // All hooks use command type with async:true to never block Claude Code
+        let curlCmd = "curl -sf -m 2 -X POST -H 'Content-Type: application/json' -d \"$(cat)\" http://localhost:$(cat ~/.ccani/port 2>/dev/null || echo \(port))/hook || true"
+
+        let allEvents = [
+            "SessionStart", "SessionEnd",
             "UserPromptSubmit", "PreToolUse", "PostToolUse",
             "PostToolUseFailure", "PermissionRequest", "Stop"
         ]
-        let commandEvents = ["SessionStart", "SessionEnd"]
 
-        for event in httpEvents {
+        for event in allEvents {
             let entry: [String: Any] = [
                 "matcher": "",
-                "hooks": [["type": "http", "url": "http://localhost:\(port)/hook"]]
-            ]
-            var existing = hooks[event] as? [[String: Any]] ?? []
-            existing.append(entry)
-            hooks[event] = existing
-        }
-
-        let curlCmd = "curl -sf -X POST -H 'Content-Type: application/json' -d \"$(cat)\" http://localhost:$(cat ~/.ccani/port 2>/dev/null || echo \(port))/hook || true"
-        for event in commandEvents {
-            let entry: [String: Any] = [
-                "matcher": "",
-                "hooks": [["type": "command", "command": curlCmd]]
+                "hooks": [[
+                    "type": "command",
+                    "command": curlCmd,
+                    "async": true
+                ] as [String: Any]]
             ]
             var existing = hooks[event] as? [[String: Any]] ?? []
             existing.append(entry)
