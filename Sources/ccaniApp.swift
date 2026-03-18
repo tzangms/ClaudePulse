@@ -43,9 +43,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             try server.start()
             self.server = server
 
-            let configurator = HooksConfigurator()
-            if configurator.needsSetup() {
-                configurator.promptAndInstall(port: server.port)
+            // Defer hooks setup to avoid blocking app launch with modal dialog
+            let port = server.port
+            DispatchQueue.main.async {
+                let configurator = HooksConfigurator()
+                if configurator.needsSetup() {
+                    configurator.promptAndInstall(port: port)
+                }
             }
         } catch HookServer.ServerError.anotherInstanceRunning {
             print("Another ccani instance is already running. Exiting.")
