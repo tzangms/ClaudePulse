@@ -85,6 +85,27 @@ class PanelSettings {
         didSet { UserDefaults.standard.set(textSize.rawValue, forKey: "textSize") }
     }
 
+    var showDockIcon: Bool {
+        didSet {
+            UserDefaults.standard.set(showDockIcon, forKey: "showDockIcon")
+            NSApp.setActivationPolicy(showDockIcon ? .regular : .accessory)
+        }
+    }
+
+    var soundOnComplete: Bool {
+        didSet { UserDefaults.standard.set(soundOnComplete, forKey: "soundOnComplete") }
+    }
+
+    var soundName: String {
+        didSet { UserDefaults.standard.set(soundName, forKey: "soundName") }
+    }
+
+    static let availableSounds = [
+        "Glass", "Ping", "Pop", "Hero", "Blow",
+        "Bottle", "Frog", "Funk", "Morse",
+        "Purr", "Sosumi", "Submarine", "Tink", "Basso"
+    ]
+
     var accentColor: Color { accentTheme.color }
 
     private init() {
@@ -95,5 +116,8 @@ class PanelSettings {
         self.accentTheme = AccentTheme(rawValue: themeRaw) ?? .purple
         let sizeRaw = UserDefaults.standard.string(forKey: "textSize") ?? TextSize.medium.rawValue
         self.textSize = TextSize(rawValue: sizeRaw) ?? .medium
+        self.showDockIcon = UserDefaults.standard.bool(forKey: "showDockIcon")
+        self.soundOnComplete = UserDefaults.standard.bool(forKey: "soundOnComplete")
+        self.soundName = UserDefaults.standard.string(forKey: "soundName") ?? "Glass"
     }
 }

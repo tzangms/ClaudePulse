@@ -124,6 +124,97 @@ struct SettingsView: View {
                     }
                 }
 
+                // Show Dock Icon toggle
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Dock Icon")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.white)
+                        Text("Show app icon in the Dock")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.35))
+                    }
+
+                    Spacer()
+
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            settings.showDockIcon.toggle()
+                        }
+                    } label: {
+                        ZStack {
+                            Capsule()
+                                .fill(settings.showDockIcon ? settings.accentColor : .white.opacity(0.15))
+                                .frame(width: 34, height: 20)
+                            Circle()
+                                .fill(.white)
+                                .frame(width: 16, height: 16)
+                                .shadow(color: .black.opacity(0.2), radius: 1, y: 1)
+                                .offset(x: settings.showDockIcon ? 7 : -7)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                // Sound on Complete toggle
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Sound on Complete")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.white)
+                        Text("Play a sound when work finishes")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.35))
+                    }
+
+                    Spacer()
+
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            settings.soundOnComplete.toggle()
+                        }
+                    } label: {
+                        ZStack {
+                            Capsule()
+                                .fill(settings.soundOnComplete ? settings.accentColor : .white.opacity(0.15))
+                                .frame(width: 34, height: 20)
+                            Circle()
+                                .fill(.white)
+                                .frame(width: 16, height: 16)
+                                .shadow(color: .black.opacity(0.2), radius: 1, y: 1)
+                                .offset(x: settings.soundOnComplete ? 7 : -7)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                // Sound picker (only when sound is enabled)
+                if settings.soundOnComplete {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 4) {
+                            ForEach(PanelSettings.availableSounds, id: \.self) { sound in
+                                let isSelected = settings.soundName == sound
+
+                                Button {
+                                    settings.soundName = sound
+                                    NSSound(named: .init(sound))?.play()
+                                } label: {
+                                    Text(sound)
+                                        .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
+                                        .foregroundStyle(isSelected ? .white : .white.opacity(0.45))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                                .fill(isSelected ? .white.opacity(0.12) : .white.opacity(0.05))
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+
                 // Accent color selector
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Accent Color")
@@ -157,6 +248,7 @@ struct SettingsView: View {
                                 }
                             }
                         }
+                        Spacer()
                     }
                 }
 
@@ -218,9 +310,9 @@ struct SettingsView: View {
                                 .foregroundStyle(.white)
                             Spacer()
                             Button {
-                                checker.openDownloadPage()
+                                checker.checkForUpdates()
                             } label: {
-                                Text("Download")
+                                Text("Update")
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundStyle(downloadHovered ? .white : .white.opacity(0.7))
                                     .padding(.horizontal, 10)

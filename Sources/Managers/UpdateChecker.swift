@@ -13,9 +13,15 @@ class UpdateChecker: NSObject {
         super.init()
     }
 
+    private var isAppBundle: Bool {
+        Bundle.main.bundleIdentifier != nil && Bundle.main.bundlePath.hasSuffix(".app")
+    }
+
     func startPeriodicCheck() {
-        // SPUStandardUpdaterController must be created on main thread
-        // and after the app bundle is set up
+        guard isAppBundle else {
+            print("[Pulse] Skipping Sparkle — not running from .app bundle")
+            return
+        }
         let controller = SPUStandardUpdaterController(
             startingUpdater: true,
             updaterDelegate: self,

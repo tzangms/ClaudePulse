@@ -12,6 +12,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("[Pulse] App launched")
+        NSApp.setActivationPolicy(PanelSettings.shared.showDockIcon ? .regular : .accessory)
         setupPanel()
         print("[Pulse] Panel set up")
         startServer()

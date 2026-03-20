@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 @Observable
 class Session: Identifiable {
@@ -37,7 +38,11 @@ class Session: Identifiable {
         case "PermissionRequest":
             state = .waitingForUser
         case "Stop":
+            let wasWorking = state == .working
             state = .idle
+            if wasWorking && PanelSettings.shared.soundOnComplete {
+                NSSound(named: .init(PanelSettings.shared.soundName))?.play()
+            }
         default:
             break
         }

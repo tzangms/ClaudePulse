@@ -3,7 +3,7 @@ set -euo pipefail
 
 APP_NAME="ClaudePulse"
 BUNDLE_ID="com.ccani.app"
-VERSION="0.2.0"
+VERSION="0.2.1"
 SIGN_IDENTITY="Developer ID Application: ming hsien tzang (28C55B3F6N)"
 NOTARY_PROFILE="ccani"
 BUILD_DIR=".build/release"

@@ -4,6 +4,28 @@
         <title>ClaudePulse Updates</title>
         <language>en</language>
         <item>
+            <title>Version 0.2.1</title>
+            <pubDate>Thu, 20 Mar 2026 14:00:00 +0800</pubDate>
+            <sparkle:version>0.2.1</sparkle:version>
+            <sparkle:shortVersionString>0.2.1</sparkle:shortVersionString>
+            <description><![CDATA[
+                <ul>
+                    <li>Add Dock icon toggle</li>
+                    <li>Add sound notification on task complete (with sound picker)</li>
+                    <li>Fix Sparkle updater error in debug builds</li>
+                    <li>Update button triggers Sparkle auto-update</li>
+                    <li>App icon added</li>
+                    <li>Color picker aligned left</li>
+                </ul>
+            ]]></description>
+            <enclosure
+                url="https://github.com/tzangms/ClaudePulse/releases/download/v0.2.1/ClaudePulse-0.2.1.dmg"
+                length="3330361"
+                type="application/octet-stream"
+                sparkle:edSignature="DxTqAieIk416bnvTfbaFFpLGqlB1IsczElWeeF/XUfXPS4cVV4QTTRqOBvHWcTEGp6KTfI0utk2RN8VJolmAAg=="
+            />
+        </item>
+        <item>
             <title>Version 0.2.0</title>
             <pubDate>Thu, 20 Mar 2026 12:00:00 +0800</pubDate>
             <sparkle:version>0.2.0</sparkle:version>
@@ -11,7 +33,7 @@
             <description><![CDATA[
                 <ul>
                     <li>Fix bottom position hover flicker</li>
-                    <li>Add accent color picker (Purple, Cyan, Green, Orange, Pink)</li>
+                    <li>Add accent color picker</li>
                     <li>Add panel size setting (S/M/L)</li>
                     <li>Show latest prompt per session</li>
                     <li>Darker panel background</li>
