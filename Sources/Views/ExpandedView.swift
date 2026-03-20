@@ -41,12 +41,12 @@ struct SessionRow: View {
                             .foregroundStyle(rowStateColor.opacity(0.7))
                     }
                 }
-                if let cwd = session.cwd {
-                    Text(shortPath(cwd))
+                if let prompt = session.lastPrompt {
+                    Text(prompt)
                         .font(.system(size: 10))
                         .foregroundStyle(.white.opacity(0.3))
                         .lineLimit(1)
-                        .truncationMode(.head)
+                        .truncationMode(.tail)
                 }
             }
             Spacer()
@@ -87,13 +87,5 @@ struct SessionRow: View {
         case .waitingForUser: return "waiting"
         case .stale: return "stale"
         }
-    }
-
-    private func shortPath(_ path: String) -> String {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        if path.hasPrefix(home) {
-            return "~" + path.dropFirst(home.count)
-        }
-        return path
     }
 }

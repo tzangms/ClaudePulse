@@ -290,34 +290,11 @@ struct DynamicIslandContent: View {
     @ViewBuilder
     private var expandedContent: some View {
         if expandsUpward {
-            // Bottom positions: buttons at top, prompt nearest to capsule
             actionButtons
             detailSection
-            promptSection
         } else {
-            // Top center: prompt at top, buttons at bottom
-            promptSection
             detailSection
             actionButtons
-        }
-    }
-
-    @ViewBuilder
-    private var promptSection: some View {
-        if let prompt = sessionManager.activeSession?.lastPrompt {
-            HStack(spacing: 6) {
-                Image(systemName: "text.bubble")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.3))
-                Text(prompt)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.5))
-                    .lineLimit(2)
-                    .truncationMode(.tail)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .frame(width: 280, alignment: .leading)
         }
     }
 
