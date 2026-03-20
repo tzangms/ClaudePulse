@@ -19,8 +19,16 @@ rm -rf build
 mkdir -p "${APP_BUNDLE}/Contents/MacOS"
 mkdir -p "${APP_BUNDLE}/Contents/Resources"
 
-# Copy binary
+# Copy binary and fix rpath for bundled frameworks
 cp "${BUILD_DIR}/ccpulse" "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
+install_name_tool -add_rpath @executable_path/../Frameworks "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}" 2>/dev/null || true
+
+# Copy icon
+cp AppIcon.icns "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
+
+# Copy Sparkle framework
+mkdir -p "${APP_BUNDLE}/Contents/Frameworks"
+cp -R "${BUILD_DIR}/Sparkle.framework" "${APP_BUNDLE}/Contents/Frameworks/"
 
 # Create Info.plist
 cat > "${APP_BUNDLE}/Contents/Info.plist" << PLIST
@@ -28,6 +36,8 @@ cat > "${APP_BUNDLE}/Contents/Info.plist" << PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleName</key>
     <string>${APP_NAME}</string>
     <key>CFBundleDisplayName</key>
@@ -66,6 +76,28 @@ echo -n "APPL????" > "${APP_BUNDLE}/Contents/PkgInfo"
 
 # Sign the app
 echo "==> Signing app bundle..."
+
+# Sign Sparkle framework components (deep, inside-out)
+codesign --force --options runtime --timestamp \
+    --sign "${SIGN_IDENTITY}" \
+    "${APP_BUNDLE}/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices/Installer.xpc"
+
+codesign --force --options runtime --timestamp \
+    --sign "${SIGN_IDENTITY}" \
+    "${APP_BUNDLE}/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices/Downloader.xpc"
+
+codesign --force --options runtime --timestamp \
+    --sign "${SIGN_IDENTITY}" \
+    "${APP_BUNDLE}/Contents/Frameworks/Sparkle.framework/Versions/B/Updater.app"
+
+codesign --force --options runtime --timestamp \
+    --sign "${SIGN_IDENTITY}" \
+    "${APP_BUNDLE}/Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate"
+
+codesign --force --options runtime --timestamp \
+    --sign "${SIGN_IDENTITY}" \
+    "${APP_BUNDLE}/Contents/Frameworks/Sparkle.framework"
+
 codesign --force --options runtime --timestamp \
     --sign "${SIGN_IDENTITY}" \
     "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"

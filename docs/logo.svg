@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1028"/>
+      <stop offset="50%" stop-color="#0f0a1a"/>
+      <stop offset="100%" stop-color="#0a0610"/>
+    </linearGradient>
+
+    <!-- Accent gradient (purple) -->
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c084fc"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+
+    <!-- Glow gradient -->
+    <radialGradient id="glow" cx="0.5" cy="0.45" r="0.5">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Sparkle glow -->
+    <radialGradient id="sparkle-glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#c084fc" stop-opacity="0.6"/>
+      <stop offset="60%" stop-color="#a855f7" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background (macOS will apply rounded rect mask) -->
+  <rect width="1024" height="1024" fill="url(#bg)" rx="228" ry="228"/>
+
+  <!-- Subtle ambient glow -->
+  <ellipse cx="512" cy="512" rx="400" ry="300" fill="url(#glow)"/>
+
+  <!-- Dynamic Island capsule shape -->
+  <rect x="192" y="392" width="640" height="140" rx="70" ry="70"
+        fill="#1e1530" stroke="rgba(168,85,247,0.15)" stroke-width="2"/>
+
+  <!-- Inner capsule subtle fill -->
+  <rect x="196" y="396" width="632" height="132" rx="66" ry="66"
+        fill="rgba(168,85,247,0.04)"/>
+
+  <!-- Pulse line through capsule -->
+  <polyline
+    points="230,462 320,462 360,462 390,415 420,510 450,435 480,485 510,448 540,472 570,452 610,462 680,462 740,462 800,462"
+    fill="none"
+    stroke="url(#accent)"
+    stroke-width="6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Pulse line glow -->
+  <polyline
+    points="230,462 320,462 360,462 390,415 420,510 450,435 480,485 510,448 540,472 570,452 610,462 680,462 740,462 800,462"
+    fill="none"
+    stroke="#a855f7"
+    stroke-width="16"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.2"
+  />
+
+  <!-- Active dot (left side of capsule) -->
+  <circle cx="260" cy="462" r="16" fill="url(#accent)"/>
+  <circle cx="260" cy="462" r="26" fill="none" stroke="#a855f7" stroke-width="2" opacity="0.3"/>
+
+  <!-- Sparkle icon (top right, representing Claude AI) -->
+  <g transform="translate(660, 290) scale(2.0)">
+    <circle cx="40" cy="40" r="36" fill="url(#sparkle-glow)"/>
+    <!-- 4-point sparkle -->
+    <path d="M40 12 L44 32 L64 28 L48 40 L64 52 L44 48 L40 68 L36 48 L16 52 L32 40 L16 28 L36 32 Z"
+          fill="url(#accent)" opacity="0.9"/>
+  </g>
+</svg>
