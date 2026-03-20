@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <channel>
+        <title>ClaudePulse Updates</title>
+        <language>en</language>
+        <!--
+            After building a release DMG, generate the appcast entry:
+
+            1. Generate Ed25519 keys (one-time):
+               .build/artifacts/sparkle/Sparkle/bin/generate_keys
+
+            2. Sign the DMG and get the signature + length:
+               .build/artifacts/sparkle/Sparkle/bin/sign_update build/ClaudePulse-X.Y.Z.dmg
+
+            3. Add an <item> below with the version, signature, and download URL.
+        -->
+    </channel>
+</rss>

@@ -54,7 +54,9 @@ cat > "${APP_BUNDLE}/Contents/Info.plist" << PLIST
     <key>NSAppleEventsUsageDescription</key>
     <string>ClaudePulse needs access to send Apple Events to open Terminal.</string>
     <key>SUFeedURL</key>
-    <string>https://api.github.com/repos/tzangms/ccani/releases/latest</string>
+    <string>https://raw.githubusercontent.com/tzangms/ccani/main/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>rdWqg6DxZAeugDCqV5pjjUUJck1xNni80UGLubN5wCI=</string>
 </dict>
 </plist>
 PLIST
