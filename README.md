@@ -2,7 +2,7 @@
 
 A macOS menu bar app that brings **Dynamic Island-inspired** real-time monitoring to your Claude Code sessions.
 
-<video src="https://github.com/tzangms/ClaudePulse/raw/main/docs/video.mp4" width="100%" autoplay loop muted></video>
+![Demo](docs/demo.gif)
 
 ## Features
 
