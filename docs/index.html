@@ -56,7 +56,7 @@
     }
 
     .container {
-      max-width: 960px;
+      max-width: 1200px;
       margin: 0 auto;
       padding: 0 24px;
       position: relative;
@@ -117,16 +117,20 @@
     .hero-layout {
       display: flex;
       align-items: center;
-      gap: 48px;
+      gap: 40px;
     }
 
     .hero-content {
-      flex: 1;
+      flex: 2;
       min-width: 0;
     }
 
+    .hero-title-row {
+      margin-bottom: 20px;
+    }
+
     .hero-video {
-      flex: 1;
+      flex: 3;
       min-width: 0;
     }
 
@@ -137,40 +141,17 @@
       border: 1px solid rgba(255,255,255,0.06);
     }
 
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--purple-dim);
-      color: var(--purple);
-      font-size: 13px;
-      font-weight: 500;
-      padding: 6px 14px;
-      border-radius: 20px;
-      margin-bottom: 24px;
-      border: 1px solid rgba(179, 102, 255, 0.2);
-    }
-
-    .badge::before {
-      content: '';
-      width: 6px;
-      height: 6px;
-      background: var(--purple);
-      border-radius: 50%;
-      animation: pulse-dot 2s ease-in-out infinite;
-    }
-
     @keyframes pulse-dot {
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.5; transform: scale(0.8); }
     }
 
     h1 {
-      font-size: clamp(40px, 6vw, 64px);
+      font-size: clamp(28px, 4vw, 42px);
       font-weight: 700;
       line-height: 1.1;
       letter-spacing: -0.03em;
-      margin-bottom: 20px;
+      margin-bottom: 0;
     }
 
     h1 .gradient {
@@ -184,13 +165,12 @@
       font-size: 18px;
       color: var(--text-dim);
       max-width: 540px;
-      margin: 0 auto 36px;
+      margin: 0 0 36px;
     }
 
     .cta-group {
       display: flex;
       gap: 12px;
-      justify-content: center;
       flex-wrap: wrap;
     }
 
@@ -562,7 +542,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 16px;
-      max-width: 720px;
+      max-width: 960px;
       margin: 0 auto;
     }
 
@@ -603,106 +583,6 @@
 
     .state-text p {
       font-size: 13px;
-      color: var(--text-dim);
-    }
-
-    /* Install */
-    .install {
-      padding: 60px 0 80px;
-    }
-
-    .install h2 {
-      text-align: center;
-      font-size: 32px;
-      font-weight: 600;
-      margin-bottom: 40px;
-    }
-
-    .install-steps {
-      max-width: 560px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .step {
-      display: flex;
-      gap: 16px;
-      align-items: flex-start;
-    }
-
-    .step-num {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: var(--purple-dim);
-      color: var(--purple);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: 600;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-
-    .step-content h4 {
-      font-size: 15px;
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-
-    .step-content p {
-      font-size: 14px;
-      color: var(--text-dim);
-    }
-
-    .code-block {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 13px;
-      margin-top: 8px;
-      color: var(--purple);
-      overflow-x: auto;
-    }
-
-    /* Tech */
-    .tech {
-      padding: 40px 0 80px;
-      text-align: center;
-    }
-
-    .tech h2 {
-      font-size: 32px;
-      font-weight: 600;
-      margin-bottom: 12px;
-    }
-
-    .tech > .container > p {
-      color: var(--text-dim);
-      margin-bottom: 32px;
-      font-size: 16px;
-    }
-
-    .tech-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-      max-width: 500px;
-      margin: 0 auto;
-    }
-
-    .tech-tag {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      padding: 8px 16px;
-      border-radius: 10px;
-      font-size: 14px;
       color: var(--text-dim);
     }
 
@@ -756,11 +636,12 @@
     <div class="container">
       <div class="hero-layout">
         <div class="hero-content">
-          <img src="icon.png" alt="CCPulse" width="96" height="96" style="border-radius: 22px; margin-bottom: 24px;">
-          <div class="badge">macOS Menu Bar App</div>
-          <h1>
-            <span class="gradient">Pulse</span> for Claude Code
-          </h1>
+          <div class="hero-title-row">
+            <img src="icon.png" alt="CCPulse" width="128" height="128" style="border-radius: 28px;">
+            <h1>
+              <span class="gradient">Pulse</span> for Claude Code
+            </h1>
+          </div>
           <p>Real-time monitoring for your Claude Code sessions. Inspired by iPhone Dynamic Island, elegantly displayed on your macOS screen.</p>
           <div class="cta-group">
             <a href="https://github.com/tzangms/ClaudePulse/releases/latest" class="btn btn-primary">
@@ -855,66 +736,6 @@
             <p>No activity for over 10 minutes</p>
           </div>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Install -->
-  <section class="install">
-    <div class="container">
-      <h2>Quick Start</h2>
-      <div class="install-steps">
-        <div class="step">
-          <span class="step-num">1</span>
-          <div class="step-content">
-            <h4>Clone & Build</h4>
-            <p>Build ClaudePulse from source</p>
-            <div class="code-block">
-              git clone https://github.com/tzangms/ClaudePulse.git<br>
-              cd ClaudePulse<br>
-              swift build -c release
-            </div>
-          </div>
-        </div>
-        <div class="step">
-          <span class="step-num">2</span>
-          <div class="step-content">
-            <h4>Launch the App</h4>
-            <p>Run the compiled binary</p>
-            <div class="code-block">.build/release/ccpulse</div>
-          </div>
-        </div>
-        <div class="step">
-          <span class="step-num">3</span>
-          <div class="step-content">
-            <h4>Set Up Hooks</h4>
-            <p>On first launch, ClaudePulse will automatically prompt you to set up Claude Code hooks. Just confirm to complete the integration.</p>
-          </div>
-        </div>
-        <div class="step">
-          <span class="step-num">4</span>
-          <div class="step-content">
-            <h4>Start Using</h4>
-            <p>Open Claude Code and start working. ClaudePulse will automatically display your session status.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Tech -->
-  <section class="tech">
-    <div class="container">
-      <h2>Tech Stack</h2>
-      <p>Built with native macOS technologies, lightweight and efficient</p>
-      <div class="tech-tags">
-        <span class="tech-tag">Swift 5.10+</span>
-        <span class="tech-tag">SwiftUI</span>
-        <span class="tech-tag">AppKit</span>
-        <span class="tech-tag">POSIX Sockets</span>
-        <span class="tech-tag">macOS 14+</span>
-        <span class="tech-tag">@Observable</span>
-        <span class="tech-tag">Swift Package Manager</span>
       </div>
     </div>
   </section>
