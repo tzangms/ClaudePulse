@@ -7,7 +7,11 @@ class SizeTrackingHostingView<Content: View>: NSHostingView<Content> {
 
     override func layout() {
         super.layout()
-        let fitting = fittingSize
+        // Use ceil to avoid fractional sizes that can clip content on some macOS versions
+        let fitting = CGSize(
+            width: ceil(fittingSize.width),
+            height: ceil(fittingSize.height)
+        )
         if fitting != lastReportedSize {
             lastReportedSize = fitting
             onSizeChange?(fitting)

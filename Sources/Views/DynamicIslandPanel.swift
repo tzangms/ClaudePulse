@@ -62,8 +62,8 @@ class DynamicIslandPanel: NSPanel {
         guard PanelSettings.shared.position == .topCenter else { return }
         guard let screen = NSScreen.main else { return }
         let screenFrame = screen.visibleFrame
-        let newWidth = max(contentSize.width, 280)
-        let newHeight = contentSize.height
+        let newWidth = ceil(max(contentSize.width, 280))
+        let newHeight = ceil(contentSize.height)
 
         let topY = frame.origin.y + frame.size.height
         let newOrigin = NSPoint(

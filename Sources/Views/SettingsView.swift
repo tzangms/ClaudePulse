@@ -446,6 +446,11 @@ class SettingsWindowController {
         hostingView.sizingOptions = [.intrinsicContentSize]
         panel.contentView = hostingView
 
+        // Resize panel to fit actual content size
+        let fittingSize = hostingView.fittingSize
+        let width = ceil(max(fittingSize.width, 280))
+        let height = ceil(fittingSize.height)
+        panel.setContentSize(CGSize(width: width, height: height))
         panel.center()
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
