@@ -13,7 +13,38 @@ struct SettingsView: View {
     @State private var quitHovered = false
     @State private var coffeeHovered = false
     @State private var colorHover: AccentTheme?
+    @State private var usageInstalled = StatusLineConfigurator().isInstalled()
     @State private var sizeHover: TextSize?
+
+    /// Says what the toggle actually does to the user's own configuration,
+    /// since it takes over `statusLine` in `~/.claude/settings.json`.
+    private var usageSubtitle: String {
+        if usageInstalled {
+            return "Pulse owns the status line and reads your limits from it"
+        }
+        if StatusLineConfigurator().commandInPlace() != nil {
+            return "Replaces your current status line to read your limits"
+        }
+        return "Uses the status line to read your 5-hour and weekly limits"
+    }
+
+    private func toggleUsageTracking() {
+        let configurator = StatusLineConfigurator()
+        do {
+            if usageInstalled {
+                try configurator.uninstall()
+            } else {
+                try configurator.install(port: HookServer.currentPort ?? 19_280)
+            }
+            usageInstalled = configurator.isInstalled()
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = "Could not change the status line"
+            alert.informativeText = error.localizedDescription
+            alert.alertStyle = .warning
+            alert.runModal()
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -128,6 +159,41 @@ struct SettingsView: View {
                     }
                 }
 
+                // Account usage — wraps Claude Code's statusLine so Pulse can
+                // read the rate limits it reports.
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Account Usage")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.white)
+                        Text(usageSubtitle)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.35))
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            toggleUsageTracking()
+                        }
+                    } label: {
+                        ZStack {
+                            Capsule()
+                                .fill(usageInstalled ? settings.accentColor : .white.opacity(0.15))
+                                .frame(width: 34, height: 20)
+                            Circle()
+                                .fill(.white)
+                                .frame(width: 16, height: 16)
+                                .shadow(color: .black.opacity(0.2), radius: 1, y: 1)
+                                .offset(x: usageInstalled ? 7 : -7)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+
                 // Show Dock Icon toggle
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -213,6 +279,74 @@ struct SettingsView: View {
                         .pickerStyle(.menu)
                         .frame(width: 110)
                     }
+                }
+
+                // Show over fullscreen
+                SettingsToggleRow(
+                    title: "Show Over Fullscreen",
+                    subtitle: "Float above fullscreen apps like video players",
+                    isOn: Binding(get: { settings.showOverFullscreen },
+                                  set: { settings.showOverFullscreen = $0 })
+                )
+
+                // Permission control
+                SettingsToggleRow(
+                    title: "Answer Permissions in Pulse",
+                    subtitle: "Show Allow / Allow all / Deny in the panel",
+                    isOn: Binding(get: { settings.permissionControl },
+                                  set: { settings.permissionControl = $0 })
+                )
+
+                if settings.permissionControl {
+                    HStack {
+                        Text("Wait")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.white.opacity(0.6))
+                        Spacer()
+                        Picker("", selection: Binding(
+                            get: { settings.permissionTimeout },
+                            set: { newValue in
+                                settings.permissionTimeout = newValue
+                                NotificationCenter.default.post(name: .ccaniHooksNeedSync, object: nil)
+                            }
+                        )) {
+                            Text("30s").tag(30.0)
+                            Text("1 min").tag(60.0)
+                            Text("2 min").tag(120.0)
+                            Text("5 min").tag(300.0)
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .frame(width: 110)
+                    }
+                    Text("After that the prompt goes back to the terminal.")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.35))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                // Fallback reveal target
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Reveal In")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.white)
+                        Text("Auto: the session's terminal, else Claude")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.35))
+                    }
+                    Spacer()
+                    Picker("", selection: Binding(
+                        get: { settings.revealTarget },
+                        set: { settings.revealTarget = $0 }
+                    )) {
+                        ForEach(RevealTarget.allCases, id: \.self) { target in
+                            Text(target.displayName).tag(target)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .frame(width: 110)
                 }
 
                 // Accent color selector
@@ -409,6 +543,48 @@ struct SettingsView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .environment(\.colorScheme, .dark)
+    }
+}
+
+/// The pill toggle used across the settings sheet.
+struct SettingsToggleRow: View {
+    let title: String
+    let subtitle: String
+    @Binding var isOn: Bool
+    private let settings = PanelSettings.shared
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white)
+                Text(subtitle)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.white.opacity(0.35))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer()
+
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    isOn.toggle()
+                }
+            } label: {
+                ZStack {
+                    Capsule()
+                        .fill(isOn ? settings.accentColor : .white.opacity(0.15))
+                        .frame(width: 34, height: 20)
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 16, height: 16)
+                        .shadow(color: .black.opacity(0.2), radius: 1, y: 1)
+                        .offset(x: isOn ? 7 : -7)
+                }
+            }
+            .buttonStyle(.plain)
+        }
     }
 }
 

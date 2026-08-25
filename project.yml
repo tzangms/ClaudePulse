@@ -1,0 +1,90 @@
+name: ClaudePulse
+options:
+  bundleIdPrefix: com.ccani
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "14.0"
+  groupSortPosition: top
+  generateEmptyDirectories: true
+
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: 2.6.0
+
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    MARKETING_VERSION: "0.2.7"
+    CURRENT_PROJECT_VERSION: "0.2.7"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_HARDENED_RUNTIME: YES
+
+targets:
+  ClaudePulse:
+    type: application
+    platform: macOS
+    # Keep the SwiftPM module name so `@testable import ccpulse` works in both worlds.
+    settings:
+      base:
+        PRODUCT_NAME: ClaudePulse
+        PRODUCT_MODULE_NAME: ccpulse
+        PRODUCT_BUNDLE_IDENTIFIER: com.ccani.app
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        CODE_SIGN_ENTITLEMENTS: ""
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
+    sources:
+      - path: Sources
+        excludes:
+          - Info.plist
+    resources:
+      - path: AppIcon.icns
+        buildPhase: resources
+    dependencies:
+      - package: Sparkle
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleName: ClaudePulse
+        CFBundleDisplayName: ClaudePulse
+        CFBundleIconFile: AppIcon
+        CFBundlePackageType: APPL
+        LSUIElement: true
+        LSMinimumSystemVersion: "14.0"
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSAppleEventsUsageDescription: "ClaudePulse focuses your terminal window when you click a session."
+        SUFeedURL: https://raw.githubusercontent.com/farfromrefug/ClaudePulse/main/appcast.xml
+        SUPublicEDKey: rdWqg6DxZAeugDCqV5pjjUUJck1xNni80UGLubN5wCI=
+
+  ClaudePulseTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests
+    dependencies:
+      - target: ClaudePulse
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ccani.app.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  ClaudePulse:
+    build:
+      targets:
+        ClaudePulse: all
+        ClaudePulseTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - ClaudePulseTests
+    profile:
+      config: Release
+    archive:
+      config: Release

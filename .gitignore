@@ -6,3 +6,4 @@ build/
 sparkle_private_key.pem
 sparkle_public_key.pem
 .playwright-mcp/
+ClaudePulse.xcodeproj/

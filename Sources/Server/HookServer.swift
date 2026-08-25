@@ -1,14 +1,34 @@
 import Foundation
 
 class HookServer {
-    private let onEvent: (HookEvent) -> Void
-    private(set) var port: UInt16 = 19280
+    /// Preferred port. Claude Code's hook config stores an absolute URL, so the
+    /// app tries hard to come back on the same port every launch.
+    static let preferredPort: UInt16 = 19280
+    static let portRange = UInt16(19280)...UInt16(19289)
+
+    private let onEvent: (HookEvent, HookConnection) -> Void
+    private let onStatusLine: (StatusLinePayload) -> Void
+    private let portRange: ClosedRange<UInt16>
+    private let portFileURL: URL
+    private(set) var port: UInt16 = HookServer.preferredPort
     private var serverSocket: Int32 = -1
     private var running = false
     private let serverQueue = DispatchQueue(label: "ccani.server", qos: .userInitiated)
 
-    init(onEvent: @escaping (HookEvent) -> Void) {
+    static let defaultPortFileURL = FileManager.default
+        .homeDirectoryForCurrentUser
+        .appendingPathComponent(".ccani/port")
+
+    init(
+        portRange: ClosedRange<UInt16> = HookServer.portRange,
+        portFileURL: URL = HookServer.defaultPortFileURL,
+        onEvent: @escaping (HookEvent, HookConnection) -> Void,
+        onStatusLine: @escaping (StatusLinePayload) -> Void = { _ in }
+    ) {
+        self.portRange = portRange
+        self.portFileURL = portFileURL
         self.onEvent = onEvent
+        self.onStatusLine = onStatusLine
     }
 
     func start() throws {
@@ -18,7 +38,7 @@ class HookServer {
         }
 
         // Try to bind to a port in range
-        for candidatePort in UInt16(19280)...UInt16(19289) {
+        for candidatePort in portRange {
             let sock = socket(AF_INET, SOCK_STREAM, 0)
             guard sock >= 0 else { continue }
 
@@ -49,6 +69,7 @@ class HookServer {
 
             self.serverSocket = sock
             self.port = candidatePort
+            Self.currentPort = candidatePort
             self.running = true
             writePortFile()
 
@@ -98,47 +119,112 @@ class HookServer {
     }
 
     private func handleClient(_ sock: Int32) {
-        defer { close(sock) }
-
-        // Set short read timeout
-        var timeout = timeval(tv_sec: 2, tv_usec: 0)
+        // Reads must not hang forever, but the *response* may be deferred
+        // indefinitely (a permission prompt waits for the user), so the socket
+        // is owned by HookConnection from here on.
+        var timeout = timeval(tv_sec: 5, tv_usec: 0)
         setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
 
-        // Read request — curl sends everything in one go, so one read is enough
-        var buffer = [UInt8](repeating: 0, count: 65536)
-        let bytesRead = buffer.withUnsafeMutableBytes { ptr in
-            read(sock, ptr.baseAddress!, 65536)
+        let connection = HookConnection(sock: sock)
+
+        guard let request = readRequest(sock) else {
+            connection.respond(status: "400 Bad Request", body: "{}")
+            return
         }
-        guard bytesRead > 0 else { return }
 
-        let data = Data(buffer[0..<bytesRead])
+        // The status line is a separate feed: it is the only place Claude Code
+        // reports account-wide rate limits and the context window size.
+        if request.path == Self.statusLinePath {
+            guard let payload = try? JSONDecoder().decode(StatusLinePayload.self, from: request.body) else {
+                connection.respondPlainText("")
+                return
+            }
+            DispatchQueue.main.async { [weak self] in
+                self?.onStatusLine(payload)
+            }
+            // Pulse owns the status line, so it renders what Claude Code prints.
+            connection.respondPlainText(StatusLineRenderer.render(payload))
+            return
+        }
 
-        // Parse HTTP body
-        var responseStr = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+        guard var event = try? JSONDecoder().decode(HookEvent.self, from: request.body) else {
+            connection.respondEmpty()
+            return
+        }
+        let origin = TerminalOrigin(headers: request.headers)
+        event.origin = origin.isEmpty ? nil : origin
 
-        if let bodyRange = data.range(of: Data("\r\n\r\n".utf8)) {
-            let body = data[bodyRange.upperBound...]
-            if let event = try? JSONDecoder().decode(HookEvent.self, from: body) {
-                DispatchQueue.main.async { [weak self] in
-                    self?.onEvent(event)
-                }
-                responseStr = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}"
+        DispatchQueue.main.async { [weak self] in
+            guard let self else {
+                connection.respondEmpty()
+                return
+            }
+            self.onEvent(event, connection)
+        }
+    }
+
+    /// Where the wrapped `statusLine` command posts Claude Code's payload.
+    static let statusLinePath = "/statusline"
+
+    /// The port the running server bound to, for code that needs to write it
+    /// into a script or config without holding the server itself.
+    private(set) static var currentPort: UInt16?
+
+    private struct ParsedRequest {
+        let path: String
+        let headers: [String: String]
+        let body: Data
+    }
+
+    /// Reads a full HTTP request, honouring Content-Length so large
+    /// `tool_input` payloads are not truncated across TCP segments.
+    private func readRequest(_ sock: Int32) -> ParsedRequest? {
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 16384)
+        var headerEnd: Range<Data.Index>?
+
+        while headerEnd == nil {
+            let n = buffer.withUnsafeMutableBytes { read(sock, $0.baseAddress!, 16384) }
+            guard n > 0 else { return nil }
+            data.append(contentsOf: buffer[0..<n])
+            headerEnd = data.range(of: Data("\r\n\r\n".utf8))
+            if data.count > 8 * 1024 * 1024 { return nil }
+        }
+        guard let headerEnd else { return nil }
+
+        let headerText = String(decoding: data[data.startIndex..<headerEnd.lowerBound], as: UTF8.self)
+        let lines = headerText.split(separator: "\r\n")
+        // "POST /statusline HTTP/1.1" — the middle field, query stripped.
+        let path = lines.first?.split(separator: " ").dropFirst().first
+            .map { String($0.split(separator: "?").first ?? "") } ?? "/"
+
+        var headers: [String: String] = [:]
+        for line in lines.dropFirst() {
+            guard let colon = line.firstIndex(of: ":") else { continue }
+            let name = line[line.startIndex..<colon].trimmingCharacters(in: .whitespaces).lowercased()
+            let value = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+            headers[name] = value
+        }
+
+        var body = data[headerEnd.upperBound...]
+        if let lengthString = headers["content-length"], let contentLength = Int(lengthString) {
+            while body.count < contentLength {
+                let n = buffer.withUnsafeMutableBytes { read(sock, $0.baseAddress!, 16384) }
+                guard n > 0 else { break }
+                data.append(contentsOf: buffer[0..<n])
+                body = data[headerEnd.upperBound...]
+            }
+            if body.count > contentLength {
+                body = body.prefix(contentLength)
             }
         }
-
-        // Send response
-        if let responseData = responseStr.data(using: .utf8) {
-            responseData.withUnsafeBytes { ptr in
-                _ = Foundation.write(sock, ptr.baseAddress!, responseData.count)
-            }
-        }
+        return ParsedRequest(path: path, headers: headers, body: Data(body))
     }
 
     // MARK: - Single Instance Detection
 
     private func readExistingPortFile() -> UInt16? {
-        let file = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".ccani/port")
+        let file = portFileURL
         guard let content = try? String(contentsOf: file, encoding: .utf8),
               let port = UInt16(content.trimmingCharacters(in: .whitespacesAndNewlines)) else {
             return nil
@@ -172,16 +258,13 @@ class HookServer {
     // MARK: - Port File
 
     private func writePortFile() {
-        let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ccani")
+        let dir = portFileURL.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let file = dir.appendingPathComponent("port")
-        try? "\(port)".write(to: file, atomically: true, encoding: .utf8)
+        try? "\(port)".write(to: portFileURL, atomically: true, encoding: .utf8)
     }
 
     private func removePortFile() {
-        let file = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".ccani/port")
-        try? FileManager.default.removeItem(at: file)
+        try? FileManager.default.removeItem(at: portFileURL)
     }
 
     enum ServerError: Error, LocalizedError {
