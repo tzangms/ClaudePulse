@@ -49,14 +49,25 @@ struct CapsuleView: View {
                 .frame(width: 16, height: 16)
 
             if let session = session {
-                Text(session.projectName)
-                    .font(.system(size: 12 * s, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(session.displayName)
+                        .font(.system(size: 12 * s, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    if let folder = session.subtitleName {
+                        Text(folder)
+                            .font(.system(size: 9 * s))
+                            .foregroundStyle(.white.opacity(0.4))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                }
 
-                Text(statusText)
-                    .font(.system(size: 11 * s, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.6))
+                // A word like "Working..." costs more width than the state is
+                // worth while the panel is collapsed; the glyph says the same.
+                SessionStateGlyph(state: session.state, scale: s)
+                    .help(statusText)
             } else {
                 Text("Pulse")
                     .font(.system(size: 12 * s, weight: .medium))
@@ -65,7 +76,7 @@ struct CapsuleView: View {
 
             Spacer()
 
-            if let session = session, session.isActive, panelVisible {
+            if let session = session, session.isActive, panelVisible, settings.showSessionDuration {
                 TimelineView(.periodic(from: .now, by: 3)) { _ in
                     Text(session.formattedTime)
                         .font(.system(size: 11 * s, design: .monospaced))
@@ -95,7 +106,7 @@ struct CapsuleView: View {
             }
         }
         .padding(.horizontal, 14)
-        .frame(width: 280 * s, height: 36 * s)
+        .frame(width: settings.contentWidth, height: 36 * s)
     }
 
     @ViewBuilder
@@ -124,3 +135,51 @@ struct CapsuleView: View {
     }
 }
 
+
+
+/// The collapsed capsule's state indicator: an animated glyph rather than a
+/// word, because the capsule has no width to spare.
+struct SessionStateGlyph: View {
+    let state: SessionState
+    var scale: CGFloat = 1
+    @Environment(\.panelVisible) private var panelVisible
+    private let settings = PanelSettings.shared
+
+    var body: some View {
+        Group {
+            switch state {
+            case .working:
+                // Dots filling left to right — the same reading as a spinner,
+                // in a glyph that costs one character of width.
+                animated(Image(systemName: "ellipsis"), effect: .variableColor.iterative)
+            case .waitingForUser:
+                animated(Image(systemName: "hand.raised.fill"), effect: .pulse)
+            case .idle:
+                Image(systemName: "circle.fill")
+                    .font(.system(size: 5 * scale))
+            case .stale:
+                Image(systemName: "moon.zzz.fill")
+                    .font(.system(size: 9 * scale))
+            }
+        }
+        .foregroundStyle(color)
+        .frame(width: 14 * scale, alignment: .center)
+    }
+
+    /// Symbol animation is only worth running while the panel is on screen.
+    @ViewBuilder
+    private func animated(_ image: Image, effect: some IndefiniteSymbolEffect & SymbolEffect) -> some View {
+        image
+            .font(.system(size: 11 * scale, weight: .semibold))
+            .symbolEffect(effect, isActive: panelVisible)
+    }
+
+    private var color: Color {
+        switch state {
+        case .idle: return .gray
+        case .working: return settings.accentColor
+        case .waitingForUser: return .orange
+        case .stale: return .gray.opacity(0.5)
+        }
+    }
+}

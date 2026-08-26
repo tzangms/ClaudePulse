@@ -125,3 +125,40 @@ final class SessionTests: XCTestCase {
         XCTAssertEqual(formatted.count, 5) // "00:00"
     }
 }
+
+final class SessionLocationTests: XCTestCase {
+
+    private func event(_ name: String, cwd: String?, session: String = "s1") -> HookEvent {
+        var json: [String: Any] = ["session_id": session, "hook_event_name": name]
+        if let cwd { json["cwd"] = cwd }
+        let data = try! JSONSerialization.data(withJSONObject: json)
+        return try! JSONDecoder().decode(HookEvent.self, from: data)
+    }
+
+    /// A session that moves (cd, worktree switch) must not keep its old name.
+    func testCwdTracksEveryEventNotJustSessionStart() {
+        let session = Session(id: "s1", cwd: "/Volumes/dev/nativescript")
+        XCTAssertEqual(session.projectName, "nativescript")
+
+        session.handleEvent(event("PreToolUse", cwd: "/Volumes/dev/nativescript/alpimaps"))
+        XCTAssertEqual(session.projectName, "alpimaps")
+
+        session.handleEvent(event("CwdChanged", cwd: "/Volumes/dev/carto/mobile-sdk"))
+        XCTAssertEqual(session.projectName, "mobile-sdk")
+    }
+
+    func testMissingCwdKeepsPreviousDirectory() {
+        let session = Session(id: "s1", cwd: "/Volumes/dev/carto")
+        session.handleEvent(event("Stop", cwd: nil))
+        XCTAssertEqual(session.cwd, "/Volumes/dev/carto")
+
+        session.handleEvent(event("Stop", cwd: ""))
+        XCTAssertEqual(session.cwd, "/Volumes/dev/carto")
+    }
+
+    /// claude://resume only accepts UUIDs; anything else must not be launched.
+    func testClaudeDesktopDeepLinkRejectsNonUUID() {
+        XCTAssertFalse(SessionOpener.openInClaudeDesktop(sessionId: "not-a-uuid"))
+        XCTAssertFalse(SessionOpener.openInClaudeDesktop(sessionId: ""))
+    }
+}

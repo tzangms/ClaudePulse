@@ -2,24 +2,40 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>LSUIElement</key>
-    <true/>
-    <key>CFBundleName</key>
-    <string>ccani</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.ccani.app</string>
-    <key>CFBundleVersion</key>
-    <string>0.1</string>
-    <key>CFBundleShortVersionString</key>
-    <string>0.1</string>
-    <key>NSAppTransportSecurity</key>
-    <dict>
-        <key>NSAllowsLocalNetworking</key>
-        <true/>
-    </dict>
-    <key>SUFeedURL</key>
-    <string>https://raw.githubusercontent.com/tzangms/ClaudePulse/main/appcast.xml</string>
-    <key>SUPublicEDKey</key>
-    <string>rdWqg6DxZAeugDCqV5pjjUUJck1xNni80UGLubN5wCI=</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>ClaudePulse</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>ClaudePulse</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>ClaudePulse focuses your terminal window when you click a session.</string>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/farfromrefug/ClaudePulse/main/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>rdWqg6DxZAeugDCqV5pjjUUJck1xNni80UGLubN5wCI=</string>
 </dict>
 </plist>
